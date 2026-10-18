@@ -1,0 +1,16 @@
+const mysql = require('mysql2/promise');
+
+/**
+ * La base de datos local la usaremos para verficar purebas internas, se buscara
+ * que deben de crear cada uno una cuenta en supabase.com y generaremos una api para conectarnos a un servicio en bd en la nube , para ello debemos configurar el archivo.env
+ */
+
+const pool = mysql.createPool({
+  host:'localhost',
+  port:'3306',
+  user:'root',
+  password:'Elena@07311976',  
+  database: 'cecyt9_local',
+  dateStrings: true,
+  
+});
