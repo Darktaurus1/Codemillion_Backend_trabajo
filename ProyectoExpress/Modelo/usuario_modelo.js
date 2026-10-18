@@ -46,7 +46,37 @@ async function eliminar(id) {
     return filas [0];
         
     }
-    module.exports = {listar, ObtenerPorid, crear, actualizar, eliminar, buscarPorCorreoConHash}
-    //Tarea uno crear los modelos de las tablas talleres y asistencia 
-    //taller tiene registaralumno al taller , consultar todos los talleres
-    //asistencia tiene registrarasistencia consultar asistencia de taller
+     // Registrar alumno al taller
+async function registrarAlumnoTaller(usuarioId, tallerId) {
+    const [info] = await PoolConnection.query(
+        `INSERT INTO taller_usuarios (usuario_id, taller_id) VALUES (?, ?)`,
+        [usuarioId, tallerId]
+    );
+    return { id: info.insertId, usuarioId, tallerId };
+}
+// Consultar todos los talleres
+async function listarTalleres() {
+    const [filas] = await PoolConnection.query(`SELECT * FROM talleres ORDER BY id`);
+    return filas;
+}
+
+
+
+// Registrar asistencia
+async function registrarAsistencia({tallerId, nombreAlumno, boleta}) {
+    const [info] = await PoolConnection.query(
+        `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
+        [tallerId, nombreAlumno, boleta]
+    );
+    return { id: info.insertId, tallerId, nombreAlumno, boleta };
+}
+
+// Consultar asistencias de un taller 
+async function consultarAsistenciaTaller(tallerId) {
+    const [filas] = await PoolConnection.query(
+        `SELECT * FROM asistencias WHERE taller_id = ? ORDER BY id`,
+        [tallerId]
+    );
+    return filas;
+}
+ module.exports = {listar, ObtenerPorid, crear, actualizar, eliminar, buscarPorCorreoConHash, registrarAlumnoTaller, listarTalleres, registrarAsistencia, consultarAsistenciaTaller}
