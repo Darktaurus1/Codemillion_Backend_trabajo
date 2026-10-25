@@ -1,4 +1,4 @@
-const pool = require("../bd-local")
+const pool = require('../bd-local')
 const COLUMNAS_TALLERES = "id, nombre, instructor, fecha, cupo, created_at"
 
 async function listar() {
