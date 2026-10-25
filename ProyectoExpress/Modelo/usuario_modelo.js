@@ -1,82 +1,71 @@
-const pull = require('../bd-local');
+const { db } = require('../datos/memoria');
 
-const COLUMNAS_PUBLICAS = 'id, nombre, correo, boleta, rol';
-//consultar a todos
+// MODELO de usuarios (en memoria). Mismas funciones y respuestas que usuarios.model.mysql.js.
+// Nunca devuelve contrasena_hash, igual que COLUMNAS_PUBLICAS en MySQL.
+
+function publico({ id, nombre, correo, boleta, rol }) {
+  return { id, nombre, correo, boleta, rol };
+}
+
+// Correo o boleta repetidos: el mismo código de error que MySQL, para que el controlador responda 409.
+// Como la collation de MySQL, el correo se compara sin distinguir mayúsculas.
+function revisarDuplicado({ correo, boleta }, idPropio) {
+  const repetido = db.usuarios.some(
+    (u) =>
+      u.id !== idPropio &&
+      ((correo !== undefined && u.correo.toLowerCase() === correo.toLowerCase()) ||
+        (boleta !== undefined && u.boleta === boleta))
+  );
+  if (repetido) {
+    const error = new Error('Duplicate entry');
+    error.code = 'ER_DUP_ENTRY';
+    throw error;
+  }
+}
+
 async function listar() {
-    const [filas] = await PoolConnection.query(`SELECT ${COLUMNAS_PUBLICAS} FROM usuarios ORDER BY id`);
-    return filas;
-}
-//Obtener por id
-async function ObtenerPorid() {
-    const [filas] = await PoolConnection.query(`SELECT ${COLUMNAS_PUBLICAS} FROM usuarios WHERE id = ?`);
-    return filas [0];
-}
-//Registrar
-async function crear({nombre, correo , contrasenaHash, boleta, rol}) {
-    const [info] = await PoolConnection.query(`INSERT INTO usuarios (nombre, correo, contrasena_hash, boleta, rol) VALUES (?, ?, ?, ?, ?)`,[nombre, correo, contrasenaHash, boleta, rol || 'alumno']);
-    return ObtenerPorid(info.insertId);
-
+  return db.usuarios.map(publico);
 }
 
-async function actualizar(id, {nombre, correo, rol}) {
-    const cambios = Object.entries ({nombre, correo, rol}).filter(([, valor]) => valor !== undefined);
-    if(cambios.length === 0) return ObtenerPorid(id);
-
-    const columnas = cambios.map(([columna]) => `${columna} = ?`).join(', ');
-
-    const [info] = await PoolConnection.query(`UPDATE usuarios SET ${columnas} WHERE id = ?`, [...cambios.map(([, valor]) => valor), id]);
-
-    if(info.affectedRows === 0) return undefined;
-    return ObtenerPorid(id);
-
-
+async function obtenerPorId(id) {
+  const usuario = db.usuarios.find((u) => u.id === Number(id));
+  return usuario ? publico(usuario) : undefined;
 }
 
-//Eliminar
+async function crear({ nombre, correo, contrasenaHash, boleta, rol }) {
+  revisarDuplicado({ correo, boleta });
+  const usuario = {
+    id: db.siguienteIdUsuario++,
+    nombre,
+    correo,
+    boleta,
+    rol: rol || 'alumno',
+    contrasena_hash: contrasenaHash,
+  };
+  db.usuarios.push(usuario);
+  return publico(usuario);
+}
+
+async function actualizar(id, { nombre, correo, rol }) {
+  const usuario = db.usuarios.find((u) => u.id === Number(id));
+  if (!usuario) return undefined;
+  revisarDuplicado({ correo }, usuario.id);
+  // Solo cambian los campos que vienen en la petición (PUT parcial).
+  if (nombre !== undefined) usuario.nombre = nombre;
+  if (correo !== undefined) usuario.correo = correo;
+  if (rol !== undefined) usuario.rol = rol;
+  return publico(usuario);
+}
+
 async function eliminar(id) {
-    const [filas] = await PoolConnection.query(`DELETE FROM usuarios WHERE id = ?`, [id]);
-    return info.affectedRows >0 ;
-    }
-
-
-    //Buscar por correo has
-
-    async function buscarPorCorreoConHash(correo) {
-        const [filas] = await PoolConnection.query(`SELECT * FROM usuarios WHERE correo = ?`, [correo]);
-    return filas [0];
-        
-    }
-     // Registrar alumno al taller
-async function registrarAlumnoTaller(usuarioId, tallerId) {
-    const [info] = await PoolConnection.query(
-        `INSERT INTO taller_usuarios (usuario_id, taller_id) VALUES (?, ?)`,
-        [usuarioId, tallerId]
-    );
-    return { id: info.insertId, usuarioId, tallerId };
-}
-// Consultar todos los talleres
-async function listarTalleres() {
-    const [filas] = await PoolConnection.query(`SELECT * FROM talleres ORDER BY id`);
-    return filas;
+  const antes = db.usuarios.length;
+  db.usuarios = db.usuarios.filter((u) => u.id !== Number(id));
+  return db.usuarios.length < antes;
 }
 
-
-
-// Registrar asistencia
-async function registrarAsistencia({tallerId, nombreAlumno, boleta}) {
-    const [info] = await PoolConnection.query(
-        `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
-        [tallerId, nombreAlumno, boleta]
-    );
-    return { id: info.insertId, tallerId, nombreAlumno, boleta };
+async function buscarPorCorreoConHash(correo) {
+  const usuario = db.usuarios.find((u) => u.correo.toLowerCase() === String(correo).toLowerCase());
+  return usuario ? { ...usuario } : undefined;
 }
 
-// Consultar asistencias de un taller 
-async function consultarAsistenciaTaller(tallerId) {
-    const [filas] = await PoolConnection.query(
-        `SELECT * FROM asistencias WHERE taller_id = ? ORDER BY id`,
-        [tallerId]
-    );
-    return filas;
-}
- module.exports = {listar, ObtenerPorid, crear, actualizar, eliminar, buscarPorCorreoConHash, registrarAlumnoTaller, listarTalleres, registrarAsistencia, consultarAsistenciaTaller}
+module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, buscarPorCorreoConHash };
