@@ -22,3 +22,22 @@ app.post('/eco', (req, res)=>{
 app.listen(PORT, () =>{
     console.log(`Servidor escuchando en el puerto: ${PORT}`);
 });
+app.get("/", (req, res) => {
+    res.json({mensaje: "API de Registro de Asistencia - CECyT 9 funcionando correctamente"})
+})
+
+//rutas para las consultas de talleres
+app.get("/api/talleres", talleres.listarTalleres);
+app.get("/api/talleres/:id", talleres.obtenerTaller);
+app.post('/api/talleres', talleres.crearTaller);
+
+//rutas para las consultas de asistencias
+app.get("/api/talleres/:id/asistencias", asistencias.listarAsistenciasDeTaller);
+app.post("/api/asistencias", asistencias.registrarAsistencia);
+
+//rutas para las consultas de usuarios
+app.get("/api/usuarios", usuarios.listarUsuarios);
+app.get("/api/usuarios/:id", usuarios.obtenerUsuario);
+app.post("/api/usuarios", usuarios.crearUsuario);
+app.put("/api/usuarios/:id", usuarios.actualizarUsuario);
+app.delete("/api/usuarios/:id", usuarios.eliminarUsuario);
