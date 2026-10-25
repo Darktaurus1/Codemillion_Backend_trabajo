@@ -1,21 +1,32 @@
-const pull = require('../bd-local');
+const { randomUUID } = require('crypto');
+const { db, ahora } = require('../datos/memoria');
 
-const COLUMNAS_PUBLICAS = 'id, nombre, instructor, fecha, cupo, created_at';
+// MODELO de talleres (en memoria). Exporta las mismas funciones, con las mismas respuestas, que
+// talleres.model.mysql.js y talleres.model.supabase.js: por eso el controlador es el mismo archivo.
 
-
-
-
-     // Registrar alumno al taller
-async function registrarAlumnoTaller(usuarioId, tallerId) {
-    const [info] = await PoolConnection.query(
-        `INSERT INTO taller_usuarios (usuario_id, taller_id) VALUES (?, ?)`,
-        [usuarioId, tallerId]
-    );
-    return { id: info.insertId, usuarioId, tallerId };
-}
-// Consultar todos los talleres
-async function listarTalleres() {
-    const [filas] = await PoolConnection.query(`SELECT * FROM talleres ORDER BY id`);
-    return filas;
+async function listar() {
+  return [...db.talleres].sort((a, b) => a.fecha.localeCompare(b.fecha)).map((t) => ({ ...t }));
 }
 
+// Un taller con el número de asistentes registrados; undefined si no existe (el controlador responde 404).
+async function obtenerConAsistentes(id) {
+  const taller = db.talleres.find((t) => t.id === id);
+  if (!taller) return undefined;
+  const asistentes = db.asistencias.filter((a) => a.taller_id === id).length;
+  return { ...taller, asistentes };
+}
+
+async function crear({ nombre, instructor, fecha, cupo }) {
+  const taller = {
+    id: randomUUID(),
+    nombre,
+    instructor: instructor || null,
+    fecha,
+    cupo: cupo || 30,
+    created_at: ahora(),
+  };
+  db.talleres.push(taller);
+  return { ...taller };
+}
+
+module.exports = { listar, obtenerConAsistentes, crear };

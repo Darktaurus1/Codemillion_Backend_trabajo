@@ -1,23 +1,21 @@
-const pull = require('../bd-local');
+const { randomUUID } = require('crypto');
+const { db, ahora } = require('../datos/memoria');
 
-const COLUMNAS_PUBLICAS = 'id, taller_alumno, nombre_alumno, boleta, fecha_registro';
+// MODELO de asistencias (en memoria). Igual que en MySQL: no revisa cupo ni inscripciones repetidas
+// (eso lo cuida el front esta semana) y un taller_id inexistente es un error de la BD (500).
 
-
-// Registrar asistencia
-async function registrarAsistencia({tallerId, nombreAlumno, boleta}) {
-    const [info] = await PoolConnection.query(
-        `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
-        [tallerId, nombreAlumno, boleta]
-    );
-    return { id: info.insertId, tallerId, nombreAlumno, boleta };
+async function listarPorTaller(tallerId) {
+  return db.asistencias.filter((a) => a.taller_id === tallerId).map((a) => ({ ...a }));
 }
 
-// Consultar asistencias de un taller 
-async function consultarAsistenciaTaller(tallerId) {
-    const [filas] = await PoolConnection.query(
-        `SELECT * FROM asistencias WHERE taller_id = ? ORDER BY id`,
-        [tallerId]
-    );
-    return filas;
+async function crear({ taller_id, nombre_alumno, boleta }) {
+  if (!db.talleres.some((t) => t.id === taller_id)) {
+    // Mismo caso que la llave foránea de MySQL: FOREIGN KEY (taller_id) REFERENCES talleres(id).
+    throw new Error('Cannot add or update a child row: a foreign key constraint fails (taller_id no existe)');
+  }
+  const asistencia = { id: randomUUID(), taller_id, nombre_alumno, boleta, fecha_registro: ahora() };
+  db.asistencias.push(asistencia);
+  return { ...asistencia };
 }
- module.exports = {listar, ObtenerPorid, crear, actualizar, eliminar, buscarPorCorreoConHash, registrarAlumnoTaller, listarTalleres, registrarAsistencia, consultarAsistenciaTaller}
+
+module.exports = { listarPorTaller, crear };
