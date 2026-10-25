@@ -1,32 +1,45 @@
-const { randomUUID } = require('crypto');
-const { db, ahora } = require('../datos/memoria');
-
-// MODELO de talleres (en memoria). Exporta las mismas funciones, con las mismas respuestas, que
-// talleres.model.mysql.js y talleres.model.supabase.js: por eso el controlador es el mismo archivo.
+const pool = require("../bd-local")
+const COLUMNAS_TALLERES = "id, nombre, instructor, fecha, cupo, created_at"
 
 async function listar() {
-  return [...db.talleres].sort((a, b) => a.fecha.localeCompare(b.fecha)).map((t) => ({ ...t }));
+    const [filas] = await pool.query(`SELECT ${COLUMNAS_TALLERES} FROM talleres ORDER BY fecha`)
+    return filas
 }
 
-// Un taller con el número de asistentes registrados; undefined si no existe (el controlador responde 404).
-async function obtenerConAsistentes(id) {
-  const taller = db.talleres.find((t) => t.id === id);
-  if (!taller) return undefined;
-  const asistentes = db.asistencias.filter((a) => a.taller_id === id).length;
-  return { ...taller, asistentes };
+async function obtenerPorId(id) {
+    const [filas] = await pool.query(`SELECT ${COLUMNAS_TALLERES} FROM talleres WHERE id = ?`, [id])
+    return filas[0]
 }
 
-async function crear({ nombre, instructor, fecha, cupo }) {
-  const taller = {
-    id: randomUUID(),
-    nombre,
-    instructor: instructor || null,
-    fecha,
-    cupo: cupo || 30,
-    created_at: ahora(),
-  };
-  db.talleres.push(taller);
-  return { ...taller };
+async function registrarAlumnoTaller({tallerId, nombreAlumno, boleta}) {
+  await pool.query(
+    `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
+    [tallerId, nombreAlumno, boleta]
+  )
+
+  const [filas] = await pool.query(
+        `SELECT * FROM asistencias WHERE taller_id = ? AND boleta = ? ORDER BY fecha_registro DESC LIMIT 1`,
+        [tallerId, boleta]
+    )
+    return filas[0]
 }
 
-module.exports = { listar, obtenerConAsistentes, crear };
+async function crear({nombre, instructor, fecha, cupo}) {
+    await pool.query(
+        `INSERT INTO talleres (id, nombre, instructor, fecha, cupo) 
+         VALUES (UUID(), ?, ?, ?, ?)`, 
+        [nombre, instructor, fecha, cupo]
+    );
+
+    const [filas] = await pool.query(
+        `SELECT id, nombre, instructor, fecha, cupo, created_at 
+         FROM talleres 
+         WHERE nombre = ? AND instructor = ? 
+         ORDER BY created_at DESC LIMIT 1`,
+        [nombre, instructor]
+    );
+    
+    return filas[0];
+}
+
+module.exports = {listar, obtenerPorId, crear}

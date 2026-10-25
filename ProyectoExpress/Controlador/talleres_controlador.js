@@ -1,37 +1,45 @@
-const talleresModel = require('../models/talleres.model');
+const bcrypt = require('bcryptjs');
 
-// CONTROLADOR de talleres: valida la entrada, llama al modelo y decide la respuesta HTTP.
-// Es la lógica que en el server.js semilla estaba escrita dentro de cada app.get/app.post.
+const TalleresModel = require('../Modelo/talleres_modelo');
 
-async function listarTalleres(req, res) {
-  try {
-    res.json(await talleresModel.listar());
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+async function listarTalleres(req, res){
+    try{
+        const talleres = await TalleresModel.listar();
+        res.json(talleres);
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+    
 }
-
 async function obtenerTaller(req, res) {
-  try {
-    const taller = await talleresModel.obtenerConAsistentes(req.params.id);
-    if (!taller) return res.status(404).json({ error: 'Taller no encontrado' });
-    res.json(taller);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    try{
+        const taller = await TalleresModel.obtenerPorId(req.params.id);
+        if(!taller) return res.status(404).json({error : 'Taller no encontrado'});
+        res.json(taller);
+    } catch (error){
+        res.status(500).json({error: error.message});
+    }
+}
+async function registrarAlumno(req, res) {
+    try {
+        const nuevoRegistro = await TalleresModel.registrarAlumnoTaller(req.body);
+        res.status(201).json(nuevoRegistro);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 }
 
 async function crearTaller(req, res) {
-  const { nombre, instructor, fecha, cupo } = req.body;
-  if (!nombre || !fecha) {
-    return res.status(400).json({ error: 'nombre y fecha son obligatorios' });
-  }
-  try {
-    const taller = await talleresModel.crear({ nombre, instructor, fecha, cupo });
-    res.status(201).json(taller);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const {nombre, instructor, fecha, cupo} = req.body
+    if(!nombre || !fecha){
+        return res.status(400).json({error: "nombre y fecha son obligatorios"})
+    }
+    try{
+        const taller = await TalleresModel.crear({nombre, instructor, fecha, cupo})
+        res.status(201).json(taller)
+    }catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 }
 
-module.exports = { listarTalleres, obtenerTaller, crearTaller };
+module.exports = {listarTalleres, obtenerTaller, registrarAlumno, crearTaller};

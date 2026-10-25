@@ -1,21 +1,26 @@
-const { randomUUID } = require('crypto');
-const { db, ahora } = require('../datos/memoria');
+const pool = require("../bd-local")
 
-// MODELO de asistencias (en memoria). Igual que en MySQL: no revisa cupo ni inscripciones repetidas
-// (eso lo cuida el front esta semana) y un taller_id inexistente es un error de la BD (500).
+const COLUMNAS_ASISTENCIAS = "id, taller_id, nombre_alumno, boleta, fecha_registro"
 
-async function listarPorTaller(tallerId) {
-  return db.asistencias.filter((a) => a.taller_id === tallerId).map((a) => ({ ...a }));
+async function registrarAsistencia({tallerId, nombreAlumno, boleta}) {
+  await pool.query(
+    `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
+    [tallerId, nombreAlumno, boleta]
+  )
+
+  const[filas] = await pool.query(
+      `SELECT ${COLUMNAS_ASISTENCIAS} FROM asistencias WHERE taller_id = ? AND boleta = ? ORDER BY fecha_registro DESC LIMIT 1`,
+        [tallerId, boleta]
+  )
+  return filas[0]
 }
 
-async function crear({ taller_id, nombre_alumno, boleta }) {
-  if (!db.talleres.some((t) => t.id === taller_id)) {
-    // Mismo caso que la llave foránea de MySQL: FOREIGN KEY (taller_id) REFERENCES talleres(id).
-    throw new Error('Cannot add or update a child row: a foreign key constraint fails (taller_id no existe)');
-  }
-  const asistencia = { id: randomUUID(), taller_id, nombre_alumno, boleta, fecha_registro: ahora() };
-  db.asistencias.push(asistencia);
-  return { ...asistencia };
+async function consultarAsistenciasPorTaller(tallerId) {
+  const [filas] = await pool.query(
+      `SELECT ${COLUMNAS_ASISTENCIAS} FROM asistencias WHERE taller_id = ?`,
+      [tallerId]
+  )
+  return filas
 }
 
-module.exports = { listarPorTaller, crear };
+module.exports = {registrarAsistencia, consultarAsistenciasPorTaller}
