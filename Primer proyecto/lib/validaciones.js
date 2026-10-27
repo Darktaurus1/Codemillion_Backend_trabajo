@@ -13,4 +13,4 @@ function validarContrasena(contrasena){
     return contrasena.length >= 8;
 }
 
-module.exports = {validarCorreo, validarBoleta, validarContrasena};
+module.exports = {validarCorreo, validarBoleta, validarContrasena};//hola
