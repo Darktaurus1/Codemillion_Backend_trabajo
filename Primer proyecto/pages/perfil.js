@@ -5,6 +5,7 @@ import { formatearFecha } from '../lib/formato';
 import { validarBoleta } from '../lib/validaciones';
 import estilos from '../styles/Talleres.module.css';
 
+
 // /perfil — el alumno escribe su boleta y ve sus datos, sus talleres y los talleres con lugar.
 // Todavía no hay login (llega en la semana 10): por eso se busca por boleta.
 // PASO 6: GET /api/usuarios, GET /api/talleres y GET /api/talleres/:id/asistencias (uno por taller).
@@ -18,6 +19,31 @@ export default function Perfil() {
   const [disponibles, setDisponibles] = useState([]);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+
+  const [exitoRegistro, setExitoRegistro] = useState('');   
+  const [nombreRegistro, setNombreRegistro] = useState('');
+  const [errorRegistro, setErrorRegistro] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [confirmarContrasena, setConfirmarContrasena] = useState('');
+  const [boletaRegistrar, setBoletaRegistrar] = useState('');
+  
+
+  function limpiarFormulario() {
+    setNombreRegistro('');
+    setCorreo('');
+    setContrasena('');
+    setConfirmarContrasena('');
+    setBoletaRegistrar('');
+    setError('');
+    setErrorRegistro('');
+  
+  }
+
+
+
+
+
 
 async function buscar(e) {
     e.preventDefault();
@@ -54,6 +80,35 @@ async function buscar(e) {
     }
   }
 
+async function registrarAlumno(e) {
+  e.preventDefault();
+  setErrorRegistro('');
+  setExitoRegistro('');
+
+  if (contrasena !== confirmarContrasena) {
+    setErrorRegistro('Las contraseñas no coinciden');
+    return;
+  }
+
+  try {
+    await pedirJSON('/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: nombreRegistro.trim(),
+        correo: correo.trim(),
+        contrasena,
+        confirmarContrasena,
+        boleta: boletaRegistrar.trim()
+      })
+    });
+
+    limpiarFormulario();
+    setExitoRegistro('Cuenta creada correctamente.');
+  } catch (err) {
+    setErrorRegistro(err.message || 'No se pudo registrar el usuario');
+  }
+}
   const nombre = alumno ? alumno.nombre : nombreInscrito;
 
   return (
@@ -119,6 +174,69 @@ async function buscar(e) {
       )}
         </>
       )}
+
+      <h2>Registrarse</h2>
+      <form onSubmit={registrarAlumno} className='formulario'>
+      <input
+         placeholder="Nombre..."
+        type="text"
+        name="nombre"
+        value={nombreRegistro}
+        onChange={(e) => setNombreRegistro(e.target.value)}
+        maxLength={80}
+        autoComplete="name"
+      required
+    />
+      <input
+        placeholder='Correo...'
+        type='email'
+        name='correo'
+        value={correo}
+        onChange={(e) => setCorreo(e.target.value)}
+        maxLength={254}
+        autoComplete='email'
+        required
+      />
+      <input
+        placeholder='Contraseña (8 caracteres, mayúscula, número y símbolo)'
+        type='password'
+        name='contrasena'
+        value={contrasena}
+        onChange={(e) => setContrasena(e.target.value)}
+        minLength={8}
+        maxLength={128}
+        autoComplete='new-password'
+        required
+      />
+      <input
+        placeholder='Confirmar Contraseña'
+        type='password'
+        name='confirmarContrasena'
+        value={confirmarContrasena}
+        onChange={(e) => setConfirmarContrasena(e.target.value)}
+        minLength={8}
+        maxLength={128}
+        autoComplete='new-password'
+        required
+      />
+      <input
+        placeholder='Boleta (10 dígitos)'
+        type='text'
+        name='boleta'
+        value={boletaRegistrar}
+        onChange={(e) => setBoletaRegistrar(e.target.value)}
+        inputMode='numeric'
+        pattern='\d{10}'
+        maxLength={10}
+        title='La boleta debe tener 10 dígitos'
+        required
+      />
+    {errorRegistro && <p className="error">{errorRegistro}</p>}
+    {exitoRegistro && <p>{exitoRegistro}</p>}
+
+      <button type='submit'>Registrarse</button>
+      <button type='button' onClick={limpiarFormulario}>Cancelar</button>
+    </form>
 
     </main>
   );
