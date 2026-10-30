@@ -13,8 +13,8 @@ async function obtenerPorId(id) {
 
 async function registrarAlumnoTaller({tallerId, nombreAlumno, boleta}) {
   await pool.query(
-    `INSERT INTO asistencias (taller_id, nombre_alumno, boleta) VALUES (?, ?, ?)`,
-    [tallerId, nombreAlumno, boleta]
+    `INSERT INTO asistencias (taller_id, nombre_alumno, boleta, asistencia) VALUES (?, ?, ?, ?)`,
+    [tallerId, nombreAlumno, boleta, 0]
   )
 
   const [filas] = await pool.query(

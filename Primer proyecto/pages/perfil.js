@@ -29,6 +29,8 @@ export default function Perfil() {
   const [boletaRegistrar, setBoletaRegistrar] = useState('');
   
 
+
+
   function limpiarFormulario() {
     setNombreRegistro('');
     setCorreo('');
@@ -41,8 +43,31 @@ export default function Perfil() {
   }
 
 
+const [exitoAsistencia, setExitoAsistencia] = useState('');
+const [errorAsistencia, setErrorAsistencia] = useState('');
 
+async function registrarAsistencia(taller) {
+  setErrorAsistencia('');
+  setExitoAsistencia('');
 
+  try {
+    await pedirJSON(`/asistencias/${taller.miAsistencia.id}`, {
+      method: 'PUT',
+    });
+
+    // Actualiza la pantalla sin volver a buscar
+    setMisTalleres((prev) =>
+      prev.map((t) =>
+        t.id === taller.id
+          ? { ...t, miAsistencia: { ...t.miAsistencia, asistencia: 1 } }
+          : t
+      )
+    );
+    setExitoAsistencia(`Asistencia registrada en ${taller.nombre}.`);
+  } catch (err) {
+    setErrorAsistencia(err.message || 'No se pudo registrar la asistencia');
+  }
+}
 
 
 async function buscar(e) {
@@ -68,9 +93,15 @@ async function buscar(e) {
       // Alguien puede estar inscrito sin tener cuenta: en ese caso se usa el nombre de su inscripción.
       const inscripcion = mios.length > 0 ? mios[0].asistencias.find((a) => a.boleta === b) : null;
 
+      const miosConFila = mios.map((t) => ({
+        ...t,
+        miAsistencia: t.asistencias.find((a) => a.boleta === b),
+      }));
+
+
       setAlumno(usuarios.find((u) => u.boleta === b) || null);
       setNombreInscrito(inscripcion ? inscripcion.nombre_alumno : '');
-      setMisTalleres(mios);
+      setMisTalleres(miosConFila);
       setDisponibles(conLugar);
       setBuscada(b);
     } catch (err) {
@@ -145,9 +176,17 @@ async function registrarAlumno(e) {
             <p>Todavía no estás inscrito en ningún taller.</p>
           ) : (
             <ul className={estilos.lista}>
+              {errorAsistencia && <p className="error">{errorAsistencia}</p>}
+              {exitoAsistencia && <p>{exitoAsistencia}</p>}
               {misTalleres.map((t) => (
                 <li key={t.id}>
                   <Link href={`/talleres/${t.id}`}>{t.nombre}</Link> — {formatearFecha(t.fecha)}
+                  <button
+  onClick={() => registrarAsistencia(t)}
+  disabled={Boolean(t.miAsistencia?.asistencia)}
+>
+  {t.miAsistencia?.asistencia ? 'Asistencia registrada ✓' : 'Registrar Asistencia'}
+</button>
                 </li>
               ))}
             </ul>

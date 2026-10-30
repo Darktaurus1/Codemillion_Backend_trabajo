@@ -41,26 +41,29 @@ export default function DetalleTaller() {
     }
   }
 
-  // Lugares: se calculan con lo que ya está en el estado (cada vez que cambia, React vuelve a calcular).
+  // Lugares y validación de fecha: se calculan con lo que ya está en el estado.
   const ocupados = asistencias.length;
   const libres = taller ? Math.max(0, taller.cupo - ocupados) : 0;
   const lleno = taller !== null && libres === 0;
 
-   async function inscribir(e) {
+  // Comparamos la fecha actual con la fecha del taller
+const pasado = taller ? new Date() > new Date(`${String(taller.fecha).slice(0, 10)}T23:59:59`) : false;
+
+  async function inscribir(e) {
     e.preventDefault();
     setErrorForm('');
     setExito('');
 
-    // El backend de esta semana no revisa cupo ni inscripciones repetidas: lo cuida el front.
+    // El backend no revisa cupo ni inscripciones repetidas: lo cuida el front.
     const nombreLimpio = nombre.trim();
     const boletaLimpia = boleta.trim();
     if (!nombreLimpio) return setErrorForm('Escribe tu nombre.');
     if (!validarBoleta(boletaLimpia)) return setErrorForm('La boleta debe tener 10 dígitos.');
-    // Tu turno: boleta repetida
-    if (asistencias.some((a) => a.boleta === boletaLimpia)){
-      return setErrorForm('La boleta ya está inscrita en este taller.')
+    if (asistencias.some((a) => a.boleta === boletaLimpia)) {
+      return setErrorForm('La boleta ya está inscrita en este taller.');
     }
     if (lleno) return setErrorForm('El taller ya no tiene lugares.');
+    if (pasado) return setErrorForm('Este taller ya ha finalizado.');
 
     setEnviando(true);
     try {
@@ -79,7 +82,7 @@ export default function DetalleTaller() {
     }
   }
 
-if (errorCarga) {
+  if (errorCarga) {
     return (
       <main>
         <p className="error">{errorCarga}</p>
@@ -104,7 +107,9 @@ if (errorCarga) {
         </div>
         <p>
           {ocupados} de {taller.cupo} lugares ocupados ·{' '}
-          {lleno ? (
+          {pasado ? (
+            <span className={estilos.lleno}>Taller finalizado</span>
+          ) : lleno ? (
             <span className={estilos.lleno}>Taller lleno</span>
           ) : (
             `${libres} ${libres === 1 ? 'lugar libre' : 'lugares libres'}`
@@ -112,45 +117,54 @@ if (errorCarga) {
         </p>
       </section>
 
-      {/* Aquí irá el formulario del paso 5 */}
       <section className={estilos.panel}>
         <h2>Inscribirme</h2>
         <form onSubmit={inscribir} className="formulario">
-          <input placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <input placeholder="Boleta (10 dígitos)" value={boleta} onChange={(e) => setBoleta(e.target.value)} />
-          <button type="submit" disabled={lleno || enviando}>
-            {lleno ? 'Sin lugares' : enviando ? 'Inscribiendo…' : 'Inscribirme'}
+          <input
+            placeholder="Nombre completo"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            disabled={pasado}
+          />
+          <input
+            placeholder="Boleta (10 dígitos)"
+            value={boleta}
+            onChange={(e) => setBoleta(e.target.value)}
+            disabled={pasado}
+          />
+          <button type="submit" disabled={lleno || enviando || pasado}>
+            {pasado ? 'Taller finalizado' : lleno ? 'Sin lugares' : enviando ? 'Inscribiendo…' : 'Inscribirme'}
           </button>
         </form>
         {errorForm && <p className="error">{errorForm}</p>}
         {exito && <p className={estilos.exito}>{exito}</p>}
       </section>
 
-
       <h2>Inscritos ({ocupados})</h2>
-      {/* Tu turno: tabla de inscritos */}
       {ocupados === 0 ? (
-        <p>Todavía no hay ningun inscritos. !Sé el primero!</p>) : (
-          <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Nombre</th>
-        <th>Boleta</th>
-      </tr>
-    </thead>
-    <tbody>
-      {asistencias.map((a, i) => (
-        <tr key={a.id}>
-          <td>{i + 1}</td>
-          <td>{a.nombre_alumno}</td>
-          <td>{ocultarBoleta(a.boleta)}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>  
-)}
+        <p>Todavía no hay inscritos. ¡Sé el primero!</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Boleta</th>
+              <th>Asistencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {asistencias.map((a, i) => (
+              <tr key={a.id}>
+                <td>{i + 1}</td>
+                <td>{a.nombre_alumno}</td>
+                <td>{ocultarBoleta(a.boleta)}</td>
+                <td>{a.asistencia ? 'Sí' : 'No'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </main>
   );
-
 }

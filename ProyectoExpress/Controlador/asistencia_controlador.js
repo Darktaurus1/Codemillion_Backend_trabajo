@@ -20,6 +20,20 @@ async function registrarAsistencia(req, res) {
     } 
 }
 
+async function marcarAsistencia(req, res) {
+  try {
+    const { id } = req.params;
+    const actualizado = await AsistenciaModel.marcarAsistencia(id);
+    if (!actualizado) {
+      return res.status(404).json({ error: 'No se encontró la inscripción' });
+    }
+    res.json({ id, asistencia: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
 async function listarAsistenciasDeTaller(req, res) {
     try {
         const tallerId = req.params.id;
@@ -30,4 +44,4 @@ async function listarAsistenciasDeTaller(req, res) {
     }
 }
 
-module.exports = {registrarAsistencia, listarAsistenciasDeTaller};
+module.exports = {registrarAsistencia, listarAsistenciasDeTaller, marcarAsistencia};

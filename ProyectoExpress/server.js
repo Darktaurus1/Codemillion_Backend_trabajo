@@ -26,6 +26,7 @@ app.post('/api/talleres', talleres.crearTaller);
 //rutas para las consultas de asistencias
 app.get("/api/talleres/:id/asistencias", asistencias.listarAsistenciasDeTaller)
 app.post("/api/asistencias", asistencias.registrarAsistencia)
+app.put('/api/asistencias/:id', asistencias.marcarAsistencia);
 
 //rutas para las consultas de usuarios
 app.get("/api/usuarios", usuarios.listarUsuarios)
