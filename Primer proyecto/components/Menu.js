@@ -33,6 +33,8 @@ export default function Menu() {
           )}
         </div>
       )}
+      <Link href="/iniciar-sesion">Iniciar Sesión</Link>
+      <Link href="/registro">Registrarse</Link>
     </nav>
   );
 }
